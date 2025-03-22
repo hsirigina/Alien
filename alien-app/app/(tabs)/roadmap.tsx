@@ -1,56 +1,122 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { InformationGatherer } from '../../services/InformationGatherer';
+import { ProcessStep, StepStatus } from '../../types/immigration';
 
 export default function RoadmapScreen() {
+  const [steps, setSteps] = useState<ProcessStep[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadRoadmap = async () => {
+      try {
+        console.log('Starting roadmap generation...');
+        const gatherer = new InformationGatherer();
+        
+        // Example values - in production these would come from user input
+        const institution = 'UC Berkeley';
+        const program = 'Computer Science';
+        const visaType = 'F-1';
+        const state = 'California';
+        
+        console.log('Generating roadmap for:', { institution, program, visaType, state });
+        
+        const roadmap = await gatherer.generateRoadmap(
+          institution,
+          program,
+          visaType,
+          state
+        );
+        
+        console.log('Generated roadmap:', JSON.stringify(roadmap, null, 2));
+        setSteps(roadmap);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load roadmap';
+        console.error('Roadmap generation failed:', errorMessage);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRoadmap();
+  }, []);
+
+  const getStatusColor = (status: StepStatus) => {
+    switch (status) {
+      case StepStatus.COMPLETED:
+        return '#4CAF50';
+      case StepStatus.IN_PROGRESS:
+        return '#2196F3';
+      case StepStatus.BLOCKED:
+        return '#F44336';
+      default:
+        return '#9E9E9E';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text style={styles.loadingText}>Loading your immigration roadmap...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Your Visa Roadmap</Text>
-        <Text style={styles.subtitle}>Personalized checklist for your journey</Text>
-      </View>
+      <Text style={styles.title}>Your Immigration Roadmap</Text>
+      {steps.length === 0 ? (
+        <Text style={styles.noStepsText}>No steps found. Please try again.</Text>
+      ) : (
+        steps.map((step) => (
+          <View key={step.id} style={styles.stepContainer}>
+            <View style={styles.stepHeader}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: getStatusColor(step.status) },
+                ]}
+              />
+              <Text style={styles.stepTitle}>{step.title}</Text>
+            </View>
+            <Text style={styles.stepDescription}>{step.description}</Text>
+            <Text style={styles.timeframe}>Timeframe: {step.timeframe}</Text>
+            
+            {step.substeps.length > 0 && (
+              <View style={styles.substepsContainer}>
+                {step.substeps.map((substep, index) => (
+                  <View key={index} style={styles.substep}>
+                    <View
+                      style={[
+                        styles.substepDot,
+                        { backgroundColor: getStatusColor(substep.status) },
+                      ]}
+                    />
+                    <Text style={styles.substepText}>{substep.title}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
-      <View style={styles.timelineContainer}>
-        <View style={styles.timelineItem}>
-          <View style={styles.timelineIcon}>
-            <FontAwesome name="check-circle" size={24} color="#007AFF" />
+            {step.prerequisites.length > 0 && (
+              <Text style={styles.prerequisites}>
+                Prerequisites: {step.prerequisites.join(', ')}
+              </Text>
+            )}
           </View>
-          <View style={styles.timelineContent}>
-            <Text style={styles.timelineTitle}>Initial Assessment</Text>
-            <Text style={styles.timelineDescription}>Complete your profile to get started</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.timelineIcon}>
-            <FontAwesome name="circle" size={24} color="#8E8E93" />
-          </View>
-          <View style={styles.timelineContent}>
-            <Text style={styles.timelineTitle}>Document Collection</Text>
-            <Text style={styles.timelineDescription}>Gather required documents</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.timelineIcon}>
-            <FontAwesome name="circle" size={24} color="#8E8E93" />
-          </View>
-          <View style={styles.timelineContent}>
-            <Text style={styles.timelineTitle}>Form Preparation</Text>
-            <Text style={styles.timelineDescription}>Fill out necessary forms</Text>
-          </View>
-        </View>
-
-        <View style={styles.timelineItem}>
-          <View style={styles.timelineIcon}>
-            <FontAwesome name="circle" size={24} color="#8E8E93" />
-          </View>
-          <View style={styles.timelineContent}>
-            <Text style={styles.timelineTitle}>Submission</Text>
-            <Text style={styles.timelineDescription}>Submit your application</Text>
-          </View>
-        </View>
-      </View>
+        ))
+      )}
     </ScrollView>
   );
 }
@@ -58,57 +124,92 @@ export default function RoadmapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#000000',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#8E8E93',
-    marginTop: 5,
-  },
-  timelineContainer: {
-    padding: 20,
-  },
-  timelineItem: {
-    flexDirection: 'row',
     marginBottom: 20,
-    backgroundColor: '#FFFFFF',
-    padding: 15,
-    borderRadius: 10,
+    color: '#333',
+  },
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    color: '#F44336',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  noStepsText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#666',
+    marginTop: 20,
+  },
+  stepContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 4,
   },
-  timelineIcon: {
-    marginRight: 15,
-    justifyContent: 'center',
+  stepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  timelineContent: {
-    flex: 1,
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 8,
   },
-  timelineTitle: {
+  stepTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 5,
+    color: '#333',
   },
-  timelineDescription: {
+  stepDescription: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: '#666',
+    marginBottom: 8,
+  },
+  timeframe: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 8,
+  },
+  substepsContainer: {
+    marginTop: 8,
+    marginLeft: 20,
+  },
+  substep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  substepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  substepText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  prerequisites: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 }); 
