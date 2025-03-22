@@ -5,6 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { Tabs } from 'expo-router';
+import { FontAwesome } from '@expo/vector-icons';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -35,5 +37,48 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+  );
+}
+
+export function TabLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: '#007AFF', // iOS blue
+        tabBarInactiveTintColor: '#8E8E93', // iOS gray
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E5E5EA',
+        },
+      }}>
+      <Tabs.Screen
+        name="roadmap"
+        options={{
+          title: 'Roadmap',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="map" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          title: 'Documents',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="file-text-o" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <FontAwesome name="user" size={24} color={color} />
+          ),
+        }}
+      />
+    </Tabs>
   );
 }
